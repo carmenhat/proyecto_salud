@@ -86,15 +86,65 @@ def plot_heart_rate(hr_df):
     st.plotly_chart(fig, use_container_width=True)
 
 # Función para mostrar gráfico de sueño
-def plot_sleep(sleep_df):
+def plot_sleep(sleep_df, analyzer):
+    """Muestra un gráfico detallado del sueño con los diferentes tipos."""
     if sleep_df.empty:
         st.warning("No hay datos de sueño disponibles")
         return
-        
-    sleep_df['duration'] = (sleep_df['end_time'] - sleep_df['start_time']).dt.total_seconds() / 3600
-    fig = px.bar(sleep_df, x='start_time', y='duration',
-                 title='Duración del Sueño',
-                 labels={'start_time': 'Fecha', 'duration': 'Horas de Sueño'})
+    
+    # Asegurarse de que sleep_type es numérico
+    if not pd.api.types.is_numeric_dtype(sleep_df['sleep_type']):
+        sleep_df['sleep_type'] = pd.to_numeric(sleep_df['sleep_type'], errors='coerce')
+    
+    # Filtrar solo los tipos de sueño válidos
+    valid_sleep_df = sleep_df[sleep_df['sleep_type'].isin(analyzer.valid_sleep_types)]
+    
+    if valid_sleep_df.empty:
+        st.warning("No hay datos válidos de sueño en el período seleccionado")
+        return
+    
+    # Asegurarse de que tenemos start_time, end_time y duration
+    if not all(col in valid_sleep_df.columns for col in ['start_time', 'end_time']):
+        st.error("Los datos de sueño no contienen la información temporal necesaria")
+        return
+    
+    # Crear una paleta de colores para los diferentes tipos de sueño
+    color_map = {
+        4: "#8da0cb",  # Sueño ligero - azul claro
+        5: "#3d5a80",  # Sueño profundo - azul oscuro
+        6: "#5390d9"   # Sueño REM - azul medio
+    }
+    
+    # Convertir tipos numéricos a nombres legibles
+    valid_sleep_df['sleep_type_name'] = valid_sleep_df['sleep_type'].map(analyzer.sleep_types)
+    
+    # Crear figura
+    fig = go.Figure()
+    
+    # Agregar barras para cada tipo de sueño
+    for sleep_type in valid_sleep_df['sleep_type'].unique():
+        if sleep_type in analyzer.valid_sleep_types:
+            type_df = valid_sleep_df[valid_sleep_df['sleep_type'] == sleep_type]
+            type_name = analyzer.sleep_types.get(sleep_type, f"Tipo {sleep_type}")
+            
+            fig.add_trace(go.Bar(
+                x=type_df['start_time'],
+                y=type_df['duration'],
+                name=type_name,
+                marker_color=color_map.get(sleep_type, "#A9A9A9"),  # Color definido o gris por defecto
+                hovertemplate="%{x}<br>Duración: %{y:.2f} horas<br>Tipo: " + type_name
+            ))
+    
+    # Configurar diseño del gráfico
+    fig.update_layout(
+        title='Duración y Tipos de Sueño',
+        xaxis_title='Fecha',
+        yaxis_title='Horas de Sueño',
+        barmode='stack',  # Apilar barras de diferentes tipos
+        legend_title='Tipo de Sueño',
+        hovermode='closest'
+    )
+    
     st.plotly_chart(fig, use_container_width=True)
 
 # Función para mostrar recomendaciones
