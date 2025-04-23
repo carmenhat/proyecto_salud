@@ -41,6 +41,7 @@ def get_services():
         
         fit_data = GoogleFitData(fit_service)
         analyzer = DataAnalyzer()
+        logger.info(f"DataAnalyzer creado con atributos: {dir(analyzer)}")
         recommender = HealthRecommender()
         logger.info("Todos los servicios inicializados correctamente")
         return fit_data, analyzer, recommender, auth
