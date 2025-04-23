@@ -1,5 +1,6 @@
 from typing import Dict, List
 from datetime import datetime, timedelta
+import logging
 
 class HealthRecommender:
     def __init__(self):
