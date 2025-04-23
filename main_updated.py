@@ -276,7 +276,7 @@ def main():
         st.header("Gráficos")
         plot_steps(steps_df)
         plot_heart_rate(hr_df)
-        plot_sleep(sleep_df)
+        plot_sleep(sleep_df, analyzer)
         
         # Mostrar recomendaciones
         st.header("Recomendaciones")
