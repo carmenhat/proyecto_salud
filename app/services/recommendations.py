@@ -54,9 +54,11 @@ class HealthRecommender:
         if not sleep_data:
             return
             
-        avg_sleep = sleep_data.get('average_sleep', 0)
-        quality = sleep_data.get('sleep_quality', 'unknown')
+        avg_sleep = sleep_data.get('avg_hours', 0)
+        sleep_quality = sleep_data.get('sleep_quality', 0)
         goal = self.goals['sleep']
+
+        logging.info(f"Analizando sueño: avg_hours={avg_sleep}, sleep_quality={sleep_quality}, goal={goal}")
         
         if avg_sleep < goal * 0.8:
             self.recommendations.append({
@@ -65,11 +67,17 @@ class HealthRecommender:
                 'message': f'Tu promedio de sueño ({avg_sleep:.1f}h) está por debajo de lo recomendado ({goal}h). Intenta establecer una rutina de sueño más consistente.'
             })
         
-        if quality == 'poor':
+        if sleep_quality < 30:
             self.recommendations.append({
                 'type': 'sleep',
                 'priority': 'medium',
-                'message': 'La calidad de tu sueño podría mejorar. Considera reducir el uso de dispositivos antes de dormir y mantener un ambiente oscuro y tranquilo.'
+                'message': f'La calidad de tu sueño ({sleep_quality:.1f}%) podría mejorar. Considera reducir el uso de dispositivos antes de dormir y mantener un ambiente oscuro y tranquilo.'
+            })
+        elif sleep_quality < 20:
+            self.recommendations.append({
+                'type': 'sleep',
+                'priority': 'high',
+                'message': f'La calidad de tu sueño es baja ({sleep_quality:.1f}%). Intenta mejorar tus hábitos de sueño y considera consultar a un profesional si el problema persiste.'
             })
 
     def _analyze_activity(self, activity_data: Dict) -> None:
