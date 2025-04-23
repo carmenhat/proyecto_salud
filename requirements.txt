@@ -1,0 +1,26 @@
+# Core dependencies
+streamlit==1.32.0
+pandas==2.2.0
+plotly==5.18.0
+numpy==1.26.3
+
+# Google Fit API
+google-auth==2.27.0
+google-auth-oauthlib==1.2.0
+google-api-python-client==2.118.0
+
+# Database
+sqlalchemy==2.0.27
+psycopg2-binary==2.9.9
+
+# Machine Learning
+scikit-learn==1.4.0
+
+# Development
+python-dotenv==1.0.1
+pytest==8.0.0
+black==24.1.1
+flake8==7.0.0
+
+# Docker
+gunicorn==21.2.0 
