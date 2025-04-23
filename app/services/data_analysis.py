@@ -58,94 +58,94 @@ class DataAnalyzer:
         }
 
     def analyze_sleep(self, sleep_df: pd.DataFrame) -> Dict:
-    """Analiza los datos de sueño y devuelve estadísticas."""
-    if sleep_df.empty:
-        logging.warning("No hay datos de sueño disponibles")
-        return {
-            'total_hours': 0.0,
-            'avg_hours': 0.0,
-            'sleep_quality': 0.0
+        """Analiza los datos de sueño y devuelve estadísticas."""
+        if sleep_df.empty:
+            logging.warning("No hay datos de sueño disponibles")
+            return {
+                'total_hours': 0.0,
+                'avg_hours': 0.0,
+                'sleep_quality': 0.0
         }
     
-    try:
-        # Ver qué columnas están disponibles
-        logging.info(f"Columnas en sleep_df: {sleep_df.columns.tolist()}")
-        logging.info(f"Tipos de sueño encontrados: {sleep_df['sleep_type'].unique()}")
+        try:
+            # Ver qué columnas están disponibles
+            logging.info(f"Columnas en sleep_df: {sleep_df.columns.tolist()}")
+            logging.info(f"Tipos de sueño encontrados: {sleep_df['sleep_type'].unique()}")
         
-        # Asegurarse de que las columnas necesarias existan
-        required_columns = ['sleep_type', 'duration']
-        missing_columns = [col for col in required_columns if col not in sleep_df.columns]
-        if missing_columns:
-            logging.error(f"Faltan columnas requeridas: {missing_columns}")
-            return {
-                'total_hours': 0.0,
-                'avg_hours': 0.0,
-                'sleep_quality': 0.0
-            }
+            # Asegurarse de que las columnas necesarias existan
+            required_columns = ['sleep_type', 'duration']
+            missing_columns = [col for col in required_columns if col not in sleep_df.columns]
+            if missing_columns:
+                logging.error(f"Faltan columnas requeridas: {missing_columns}")
+                return {
+                    'total_hours': 0.0,
+                    'avg_hours': 0.0,
+                    'sleep_quality': 0.0
+                }
         
-        # Convertir sleep_type a numérico si no lo es
-        if not pd.api.types.is_numeric_dtype(sleep_df['sleep_type']):
-            sleep_df['sleep_type'] = pd.to_numeric(sleep_df['sleep_type'], errors='coerce')
+            # Convertir sleep_type a numérico si no lo es
+            if not pd.api.types.is_numeric_dtype(sleep_df['sleep_type']):
+                sleep_df['sleep_type'] = pd.to_numeric(sleep_df['sleep_type'], errors='coerce')
         
-        # IMPORTANTE: Eliminemos NaNs antes de filtrar
-        sleep_df = sleep_df.dropna(subset=['sleep_type', 'duration'])
+            # IMPORTANTE: Eliminemos NaNs antes de filtrar
+            sleep_df = sleep_df.dropna(subset=['sleep_type', 'duration'])
         
-        # Mostrar valores antes de filtrar
-        logging.info(f"Tipos de sueño antes de filtrar: {sleep_df['sleep_type'].value_counts().to_dict()}")
-        logging.info(f"Total duración antes de filtrar: {sleep_df['duration'].sum():.2f} horas")
+            # Mostrar valores antes de filtrar
+            logging.info(f"Tipos de sueño antes de filtrar: {sleep_df['sleep_type'].value_counts().to_dict()}")
+            logging.info(f"Total duración antes de filtrar: {sleep_df['duration'].sum():.2f} horas")
         
-        # Filtrar solo los tipos de sueño relevantes (4=ligero, 5=profundo, 6=REM)
-        valid_sleep_df = sleep_df[sleep_df['sleep_type'].isin([4, 5, 6])]
+            # Filtrar solo los tipos de sueño relevantes (4=ligero, 5=profundo, 6=REM)
+            valid_sleep_df = sleep_df[sleep_df['sleep_type'].isin([4, 5, 6])]
         
-        logging.info(f"Filas después de filtrar por tipos válidos: {len(valid_sleep_df)}")
-        logging.info(f"Tipos después de filtrar: {valid_sleep_df['sleep_type'].value_counts().to_dict()}")
+            logging.info(f"Filas después de filtrar por tipos válidos: {len(valid_sleep_df)}")
+            logging.info(f"Tipos después de filtrar: {valid_sleep_df['sleep_type'].value_counts().to_dict()}")
         
-        if valid_sleep_df.empty:
-            logging.warning("No hay sesiones de sueño válidas después de filtrar")
-            return {
-                'total_hours': 0.0,
-                'avg_hours': 0.0,
-                'sleep_quality': 0.0
-            }
+            if valid_sleep_df.empty:
+                logging.warning("No hay sesiones de sueño válidas después de filtrar")
+                return {
+                    'total_hours': 0.0,
+                    'avg_hours': 0.0,
+                    'sleep_quality': 0.0
+                }
         
-        # Calcular métricas
-        total_hours = float(valid_sleep_df['duration'].sum())
+            # Calcular métricas
+            total_hours = float(valid_sleep_df['duration'].sum())
         
-        # Determinar cómo calcular días únicos
-        if 'date' in valid_sleep_df.columns:
-            unique_dates = valid_sleep_df['date'].nunique()
-        elif 'start_time' in valid_sleep_df.columns:
-            unique_dates = valid_sleep_df['start_time'].dt.date.nunique()
-        else:
-            unique_dates = 1
+            # Determinar cómo calcular días únicos
+            if 'date' in valid_sleep_df.columns:
+                unique_dates = valid_sleep_df['date'].nunique()
+            elif 'start_time' in valid_sleep_df.columns:
+                unique_dates = valid_sleep_df['start_time'].dt.date.nunique()
+            else:
+                unique_dates = 1
             
-        logging.info(f"Días únicos encontrados: {unique_dates}")
+            logging.info(f"Días únicos encontrados: {unique_dates}")
         
-        avg_hours = total_hours / unique_dates if unique_dates > 0 else 0.0
+            avg_hours = total_hours / unique_dates if unique_dates > 0 else 0.0
         
-        # Calcular calidad del sueño
-        deep_sleep = float(valid_sleep_df[valid_sleep_df['sleep_type'] == 5]['duration'].sum())
-        rem_sleep = float(valid_sleep_df[valid_sleep_df['sleep_type'] == 6]['duration'].sum())
-        sleep_quality = ((deep_sleep + rem_sleep) / total_hours * 100) if total_hours > 0 else 0.0
+            # Calcular calidad del sueño
+            deep_sleep = float(valid_sleep_df[valid_sleep_df['sleep_type'] == 5]['duration'].sum())
+            rem_sleep = float(valid_sleep_df[valid_sleep_df['sleep_type'] == 6]['duration'].sum())
+            sleep_quality = ((deep_sleep + rem_sleep) / total_hours * 100) if total_hours > 0 else 0.0
         
-        logging.info(f"Total sleep hours: {total_hours:.2f}")
-        logging.info(f"Average sleep hours: {avg_hours:.2f}")
-        logging.info(f"Sleep quality: {sleep_quality:.2f}%")
+            logging.info(f"Total sleep hours: {total_hours:.2f}")
+            logging.info(f"Average sleep hours: {avg_hours:.2f}")
+            logging.info(f"Sleep quality: {sleep_quality:.2f}%")
         
-        return {
-            'total_hours': total_hours,
-            'avg_hours': avg_hours,
-            'sleep_quality': sleep_quality
-        }
+            return {
+                'total_hours': total_hours,
+                'avg_hours': avg_hours,
+                'sleep_quality': sleep_quality
+            }
         
-    except Exception as e:
-        logging.error(f"Error al analizar datos de sueño: {str(e)}")
-        logging.error(f"DataFrame info: {sleep_df.info()}")
-        logging.exception("Detalle del error:")
-        return {
-            'total_hours': 0.0,
-            'avg_hours': 0.0,
-            'sleep_quality': 0.0
+        except Exception as e:
+            logging.error(f"Error al analizar datos de sueño: {str(e)}")
+            logging.error(f"DataFrame info: {sleep_df.info()}")
+            logging.exception("Detalle del error:")
+            return {
+                'total_hours': 0.0,
+                'avg_hours': 0.0,
+                'sleep_quality': 0.0
         }
 
     def analyze_activity(self, activity_df: pd.DataFrame) -> Dict:
