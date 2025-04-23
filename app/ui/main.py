@@ -210,39 +210,65 @@ def main():
             # Obtener datos de los últimos 7 días
             end_time = datetime.now()
             start_time = end_time - timedelta(days=7)
-            sleep_data = fit_data.get_sleep_data(start_time, end_time)
-            if not sleep_data.empty:
-                # Preparar datos para el gráfico
-                sleep_types = sleep_data.groupby('sleep_type')['duration'].sum()
-                sleep_types.index = sleep_types.index.map({
-                    1: 'Despierto',
-                    4: 'Sueño ligero',
-                    5: 'Sueño profundo',
-                    6: 'Sueño REM'
-                })
-                sleep_types = sleep_types[sleep_types.index.isin(['Sueño ligero', 'Sueño profundo', 'Sueño REM'])]
+            
+            try:
+                sleep_data = fit_data.get_sleep_data(start_time, end_time)
+                logging.info(f"Datos de sueño obtenidos: {len(sleep_data)} registros")
                 
-                # Calcular métricas
-                total_sleep = sleep_types.sum()
-                unique_days = sleep_data['start_time'].dt.date.nunique()
-                avg_sleep = total_sleep / unique_days if unique_days > 0 else 0
-                quality_sleep = ((sleep_types.get('Sueño profundo', 0) + sleep_types.get('Sueño REM', 0)) / total_sleep * 100 
-                               if total_sleep > 0 else 0)
-                
-                # Mostrar métricas
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Horas totales de sueño", f"{total_sleep:.1f}")
-                with col2:
-                    st.metric("Promedio por día", f"{avg_sleep:.1f}")
-                with col3:
-                    st.metric("Calidad del sueño", f"{quality_sleep:.1f}%")
-                
-                # Mostrar gráfico
-                st.subheader("Distribución del sueño")
-                st.bar_chart(sleep_types)
-            else:
-                st.warning("No se pudieron obtener datos de sueño")
+                if not sleep_data.empty:
+                    logging.info("Procesando datos de sueño para visualización")
+                    
+                    # Preparar datos para el gráfico
+                    sleep_types = sleep_data.groupby('sleep_type')['duration'].sum()
+                    logging.info(f"Tipos de sueño encontrados: {sleep_types.index.tolist()}")
+                    
+                    # Mapear tipos de sueño
+                    type_mapping = {
+                        1: 'Despierto',
+                        4: 'Sueño ligero',
+                        5: 'Sueño profundo',
+                        6: 'Sueño REM'
+                    }
+                    
+                    sleep_types.index = sleep_types.index.map(type_mapping)
+                    valid_types = ['Sueño ligero', 'Sueño profundo', 'Sueño REM']
+                    sleep_types = sleep_types[sleep_types.index.isin(valid_types)]
+                    
+                    # Calcular métricas
+                    total_sleep = sleep_types.sum()
+                    unique_days = sleep_data['start_time'].dt.date.nunique()
+                    avg_sleep = total_sleep / unique_days if unique_days > 0 else 0
+                    
+                    # Calcular calidad del sueño (proporción de sueño profundo y REM)
+                    deep_sleep = sleep_types.get('Sueño profundo', 0)
+                    rem_sleep = sleep_types.get('Sueño REM', 0)
+                    quality_sleep = ((deep_sleep + rem_sleep) / total_sleep * 100) if total_sleep > 0 else 0
+                    
+                    logging.info(f"Total sleep: {total_sleep:.2f} hours")
+                    logging.info(f"Avg sleep: {avg_sleep:.2f} hours")
+                    logging.info(f"Sleep quality: {quality_sleep:.2f}%")
+                    
+                    # Mostrar métricas
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Horas totales de sueño", f"{total_sleep:.1f}")
+                    with col2:
+                        st.metric("Promedio por día", f"{avg_sleep:.1f}")
+                    with col3:
+                        st.metric("Calidad del sueño", f"{quality_sleep:.1f}%")
+                    
+                    # Mostrar gráfico
+                    st.subheader("Distribución del sueño")
+                    if not sleep_types.empty:
+                        st.bar_chart(sleep_types)
+                    else:
+                        st.warning("No hay datos válidos para mostrar en el gráfico")
+                else:
+                    st.warning("No se encontraron datos de sueño en el período seleccionado")
+                    
+            except Exception as e:
+                logging.error(f"Error procesando datos de sueño: {str(e)}")
+                st.error("Ocurrió un error al procesar los datos de sueño")
         
     except Exception as e:
         logger.error(f"Error en la aplicación: {str(e)}")
