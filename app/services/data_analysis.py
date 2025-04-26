@@ -251,4 +251,4 @@ class DataAnalyzer:
             return 'good'
         elif avg_sleep >= 5 and efficiency >= 65:
             return 'fair'
-        return 'poor' 
+        return 'poor'

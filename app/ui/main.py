@@ -30,6 +30,7 @@ st.set_page_config(
 # Inicialización de servicios
 @st.cache_resource
 def get_services():
+
     try:
         auth = GoogleFitAuth()
         logger.info("Servicio de autenticación creado")
@@ -49,6 +50,7 @@ def get_services():
         logger.error(f"Error al inicializar servicios: {str(e)}")
         st.error(f"Error al inicializar la aplicación: {str(e)}")
         return None, None, None, None
+
 
 # Función para obtener datos
 @st.cache_data(ttl=3600)
@@ -199,7 +201,32 @@ def main():
     st.title("Health & Fitness Analytics")
     
     try:
-        # Verificar autenticación
+        # --- Capturar parámetros de la URL ---
+        query_params = st.query_params
+        code = query_params.get("code", None)
+        if code:
+            st.success(f"Código recibido: {code[:5]}...")
+        if code and not st.session_state.get("authenticated", False):
+            st.success("Código de autorización recibido. Obteniendo credenciales...")
+            try:
+                auth = GoogleFitAuth()
+                credentials = auth.get_credentials(code)
+                st.success("✅ Credenciales obtenidas y guardadas correctamente.")
+                
+                # Marcar sesión como autenticada
+                st.session_state["authenticated"] = True
+                
+                # Limpiar parámetros de la URL
+                st.query_params.clear()
+                
+                # Recargar la app
+                st.rerun()
+                
+            except Exception as e:
+                st.error(f"❌ Error obteniendo credenciales: {str(e)}")
+                return
+        
+        # --- BLOQUE NORMAL de inicialización ---
         fit_data, analyzer, recommender, auth = get_services()
         
         if not auth:
@@ -211,7 +238,7 @@ def main():
                 3. Los permisos de la aplicación en Google Cloud Console estén correctamente configurados
             """)
             return
-            
+        
         if not fit_data:
             try:
                 auth_url = auth.get_authorization_url()
