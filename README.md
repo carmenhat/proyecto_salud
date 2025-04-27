@@ -54,7 +54,7 @@ pip install -r requirements.txt
 Para ejecutar la aplicación, primero asegúrate de que el entorno virtual esté activo y luego ejecuta el siguiente comando:
 
 ```bash
-streamlit run app/ui/main.py
+streamlit run app/ui/main.py --server.port 8504
 ```
 
 Esto iniciará la aplicación y te permitirá interactuar con la interfaz de usuario.
