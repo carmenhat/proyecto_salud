@@ -18,6 +18,22 @@ class DataAnalyzer:
             109: "Ejercicio",
             113: "En transporte"
         }
+        # Definición centralizada de los tipos de sueño
+        self.sleep_types = {
+            1: "Despierto",
+            2: "Sueño (general)",
+            3: "En cama",
+            4: "Sueño ligero",
+            5: "Sueño profundo",
+            6: "Sueño REM"
+        }
+        
+        # Definir qué tipos de sueño se consideran válidos para el análisis
+        self.valid_sleep_types = [4, 5, 6]  # Sueño ligero, profundo y REM
+        
+        # Tipos que contribuyen a la calidad del sueño
+        self.quality_sleep_types = [5, 6]  # Sueño profundo y REM
+
 
     def analyze_steps(self, steps_df: pd.DataFrame) -> Dict:
         """Analiza los datos de pasos y genera estadísticas."""
