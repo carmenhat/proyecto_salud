@@ -242,7 +242,7 @@ def show_sleep_analysis(sleep_analysis, analyzer):
     with col2:
         st.metric("Promedio por día", f"{sleep_analysis.get('avg_hours', 0):.1f}")
     with col3:
-        st.metric("Calidad del sueño", f"{sleep_analysis.get('sleep_quality', 0):.1f}%")
+        st.metric("Calidad del sueño", f"{sleep_analysis.get('sleep_quality_percent', 0):.1f}%")
     
     # Mostrar gráfico de distribución del sueño
     st.subheader("Distribución del sueño")
