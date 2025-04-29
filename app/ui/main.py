@@ -7,8 +7,10 @@ from pathlib import Path
 import sys
 import logging
 from pytz import timezone
+from dotenv import load_dotenv
 
 tz = timezone('Europe/Madrid')
+load_dotenv()
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)

@@ -146,12 +146,19 @@ class DataAnalyzer:
             logging.info(f"Total sleep hours: {total_hours:.2f}")
             logging.info(f"Average sleep hours: {avg_hours:.2f}")
             logging.info(f"Sleep quality %: {sleep_quality_percent:.2f} ({quality_label})")
+            # Añadir antes del return
+            sleep_distribution = {
+                'Ligero': float(valid_sleep_df[valid_sleep_df['sleep_type'] == 4]['duration'].sum()),
+                'Profundo': float(valid_sleep_df[valid_sleep_df['sleep_type'] == 5]['duration'].sum()),
+                'REM': float(valid_sleep_df[valid_sleep_df['sleep_type'] == 6]['duration'].sum())
+            }
 
             return {
                 'total_hours': total_hours,
                 'avg_hours': avg_hours,
                 'sleep_quality_percent': sleep_quality_percent,
-                'sleep_quality_label': quality_label
+                'sleep_quality_label': quality_label,
+                'sleep_distribution': sleep_distribution
          }
 
         except Exception as e:
