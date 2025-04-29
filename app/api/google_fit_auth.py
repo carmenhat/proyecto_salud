@@ -17,7 +17,7 @@ class GoogleFitAuth:
     def __init__(self):
         try:
             # Forzar el uso del puerto 8504
-            self.redirect_uri = "http://localhost:8504/callback"
+            self.redirect_uri = "http://localhost:8504"
             logger.info(f"Redirect URI forzado a: {self.redirect_uri}")
             
             self.client_id = os.getenv('GOOGLE_CLIENT_ID')
