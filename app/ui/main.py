@@ -251,19 +251,37 @@ def show_sleep_analysis(sleep_analysis, analyzer):
     sleep_distribution = sleep_analysis.get('sleep_distribution', {})
     
     if sleep_distribution:
-        # Crear DataFrame para el gráfico
         dist_df = pd.DataFrame({
-            'Tipo': list(sleep_distribution.keys()),
+            'Fase': list(sleep_distribution.keys()),
             'Horas': list(sleep_distribution.values())
         })
-        
-        fig = px.bar(dist_df, x='Tipo', y='Horas',
-                    title='Distribución de Tipos de Sueño',
-                    color='Tipo',
-                    labels={'Tipo': 'Tipo de Sueño', 'Horas': 'Horas'})
+
+        fig = px.bar(
+            dist_df,
+            x='Fase',
+            y='Horas',
+            color='Fase',
+            text='Horas',
+            color_discrete_map={
+                'Ligero': '#8da0cb',
+                'Profundo': '#3d5a80',
+                'REM': '#5390d9'
+            },
+            title="Distribución de Sueño por Fase"
+        )
+
+        fig.update_traces(texttemplate='%{text:.1f}h', textposition='outside')
+        fig.update_layout(
+            yaxis_title='Horas',
+            xaxis_title='Fase del sueño',
+            uniformtext_minsize=8,
+            uniformtext_mode='hide',
+            bargap=0.4
+        )
+
         st.plotly_chart(fig, use_container_width=True)
     else:
-        st.warning("No hay datos válidos para mostrar en el gráfico")
+        st.warning("⚠️ No hay datos válidos para mostrar en el gráfico de fases de sueño.")
 
 # Interfaz principal
 def main():
