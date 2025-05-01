@@ -359,15 +359,70 @@ def main():
         activity_analysis = analyzer.analyze_activity(activity_df)
         
         # Mostrar métricas principales
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3 = st.columns(3)
         with col1:
             st.metric("Pasos Promedio", steps_analysis.get('daily_average', 0))
         with col2:
             st.metric("Ritmo Cardíaco Promedio", f"{hr_analysis.get('average_hr', 0):.1f} bpm")
         with col3:
             st.metric("Horas de Sueño Promedio", f"{sleep_analysis.get('avg_hours', 0):.1f}")
-        with col4:
-            st.metric("Minutos Activos", activity_analysis.get('active_minutes', 0))
+        
+        # Mostrar sección de actividad física
+        st.subheader("🏃 Actividad Física")
+
+        active_minutes = int(activity_analysis.get('active_minutes', 0))
+        goal_per_day = recommender.goals.get('active_minutes', 30)
+        total_goal = goal_per_day * days  # meta semanal
+
+        # Conversión a horas y minutos
+        h = active_minutes // 60
+        m = active_minutes % 60
+        tiempo_str = f"{h}h {m}min" if h > 0 else f"{m} min"
+
+        # Cálculo de porcentaje
+        progress = min((active_minutes / total_goal) * 100, 100)
+        progress_color = "green" if progress >= 100 else "orange" if progress >= 60 else "red"
+
+        # Mensaje motivacional
+        if progress >= 100:
+            msg = "🎉 ¡Has superado tu objetivo semanal de actividad! Excelente trabajo."
+        elif progress >= 60:
+             msg = "🟠 Vas por buen camino. ¡Un último esfuerzo y lo consigues!"
+        else:
+            msg = "🔴 Intenta moverte un poco más cada día para alcanzar tu meta."
+
+        # Mostrar métrica principal
+        st.metric("Total Minutos Activos", tiempo_str)
+
+        # Mostrar barra de progreso con Plotly
+        import plotly.graph_objects as go
+
+        fig = go.Figure(go.Indicator(
+            mode="gauge+number",
+            value=active_minutes,
+            number={'suffix': " min"},
+            title={'text': "Progreso hacia la meta"},
+            gauge={
+                'axis': {'range': [0, total_goal]},
+                'bar': {'color': progress_color},
+                'steps': [
+                    {'range': [0, total_goal * 0.6], 'color': '#f7c6c6'},
+                    {'range': [total_goal * 0.6, total_goal * 0.9], 'color': '#ffe0b2'},
+                    {'range': [total_goal * 0.9, total_goal], 'color': '#c8e6c9'},
+                ],
+                'threshold': {
+                    'line': {'color': "black", 'width': 4},
+                    'thickness': 0.75,
+                    'value': total_goal
+                }
+                
+            }
+        ))
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Mostrar mensaje motivacional
+        st.info(msg)
+
         
         # Mostrar gráficos
         st.header("Gráficos")
