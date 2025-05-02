@@ -440,7 +440,160 @@ def main():
 
         # Mostrar mensaje motivacional
         st.info(msg)
+        # ======================
+        # GRÁFICO DE MINUTOS ACTIVOS DIARIOS
+        # ======================
+        st.subheader("📆 Minutos Activos por Día")
 
+        if activity_df.empty:
+            st.warning("No hay datos de actividad disponibles.")
+        else:
+            # Calcular duración por día
+            activity_df['date'] = activity_df['start_time'].dt.date
+            active_types = [3, 7, 8, 109]  # A pie, caminando, corriendo, ejercicio
+            filtered = activity_df[activity_df['activity_type'].isin(active_types)]
+
+            daily_minutes = filtered.groupby('date')['duration'].sum().reset_index()
+            daily_minutes.rename(columns={'date': 'Fecha', 'duration': 'Minutos'}, inplace=True)
+
+            # Etiquetar si cumple objetivo
+            daily_minutes['Cumple Meta'] = daily_minutes['Minutos'].apply(
+                lambda x: '✅ Meta alcanzada' if x >= goal_per_day else '❌ Por debajo'
+            )
+
+            # Crear gráfico de barras
+            fig = px.bar(
+                daily_minutes,
+                x='Fecha',
+                y='Minutos',
+                color='Cumple Meta',
+                color_discrete_map={
+                    '✅ Meta alcanzada': '#66c2a5',  # verde
+                    '❌ Por debajo': '#fc8d62'       # rojo-naranja
+                },
+                title="Actividad Diaria: ¿Alcanzas tu meta de minutos activos?",
+                labels={'Minutos': 'Minutos Activos'}
+            )
+
+            # Línea de meta (etiquetas de texto)
+            fig.add_hline(
+                y=goal_per_day,
+                line_dash="dot",
+                line_color="black",
+                annotation_text=f"Meta diaria: {goal_per_day} min",
+                annotation_position="top left"
+            )
+
+            fig.update_layout(
+                xaxis_title="Fecha",
+                yaxis_title="Minutos activos",
+                legend_title="Estado",
+                bargap=0.25
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+
+        # ======================
+        # SECCIÓN DE PASOS
+        # ======================
+        st.subheader("👣 Pasos")
+
+        total_steps = steps_analysis.get('total_steps', 0)
+        daily_average = steps_analysis.get('daily_average', 0)
+        steps_goal = recommender.goals.get('steps', 8000)
+
+        # Calcular progreso sobre la media diaria
+        progress = min((daily_average / steps_goal) * 100, 100)
+
+        # Mensaje motivador
+        if daily_average >= steps_goal:
+            msg = "✅ ¡Estás cumpliendo tu meta diaria de pasos! Sigue así."
+        elif daily_average >= steps_goal * 0.8:
+            msg = "🟠 Estás muy cerca de la meta. Un pequeño esfuerzo diario más y lo logras."
+        else:
+            msg = "🔴 Intenta caminar un poco más cada día para alcanzar los beneficios mínimos recomendados."
+
+        # Mostrar resumen de pasos
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Promedio Diario", f"{daily_average:,} pasos")
+        with col2:
+            st.metric("Pasos Totales", f"{total_steps:,}")
+
+        # Gráfico de progreso tipo gauge
+        fig = go.Figure(go.Indicator(
+            mode="gauge+number",
+            value=daily_average,
+            number={'suffix': " /día"},
+            title={'text': "Progreso hacia la meta diaria"},
+            gauge={
+                'axis': {'range': [0, steps_goal]},
+                'bar': {'color': "green" if progress >= 100 else "orange" if progress >= 70 else "red"},
+                'steps': [
+                    {'range': [0, steps_goal * 0.7], 'color': '#f7c6c6'},
+                    {'range': [steps_goal * 0.7, steps_goal * 0.9], 'color': '#ffe0b2'},
+                    {'range': [steps_goal * 0.9, steps_goal], 'color': '#c8e6c9'},
+                ],
+                'threshold': {
+                    'line': {'color': "black", 'width': 4},
+                    'thickness': 0.75,
+                    'value': steps_goal
+                }
+            }
+        ))
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Mostrar mensaje motivador
+        st.info(msg)
+        # ======================
+        # GRÁFICO DE PASOS DIARIOS (con fines de semana)
+        # ======================
+
+        st.subheader("📊 Evolución Diaria de Pasos")
+
+        if steps_df.empty:
+            st.warning("No hay datos de pasos disponibles.")
+        else:
+            # Agrupar por fecha y sumar pasos
+            steps_daily = steps_df.groupby(steps_df['timestamp'].dt.date)['steps'].sum().reset_index()
+            steps_daily.rename(columns={'timestamp': 'Fecha', 'steps': 'Pasos'}, inplace=True)
+    
+            # Añadir tipo de día (laboral o fin de semana)
+            steps_daily['Día'] = pd.to_datetime(steps_daily['Fecha']).dt.dayofweek
+            steps_daily['Tipo de Día'] = steps_daily['Día'].apply(lambda x: 'Fin de Semana' if x >= 5 else 'Entre Semana')
+
+            # Crear gráfico
+            fig = px.bar(
+                steps_daily,
+                x='Fecha',
+                y='Pasos',
+                color='Tipo de Día',
+                color_discrete_map={
+                    'Entre Semana': '#6baed6',   # azul claro
+                    'Fin de Semana': '#fd8d3c'   # naranja
+                },
+                title="Pasos Diarios: Semana vs. Fin de Semana",
+                labels={'Pasos': 'Total de pasos'}
+            )
+
+            # Línea de referencia de objetivo
+            fig.add_hline(
+                y=steps_goal,
+                line_dash="dot",
+                line_color="green",
+                annotation_text=f"Meta: {steps_goal} pasos",
+                annotation_position="top left"
+            )
+
+            fig.update_layout(
+                xaxis_title="Fecha",
+                yaxis_title="Pasos",
+                legend_title="Tipo de Día",
+                bargap=0.25
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
 
         
         # Mostrar gráficos
