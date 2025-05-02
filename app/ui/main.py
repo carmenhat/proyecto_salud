@@ -441,6 +441,7 @@ def main():
         # Mostrar mensaje motivacional
         st.info(msg)
 
+
         
         # Mostrar gráficos
         st.header("Gráficos")
