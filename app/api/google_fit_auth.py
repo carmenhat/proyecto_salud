@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 class GoogleFitAuth:
     def __init__(self):
         try:
-            # Forzar el uso del puerto 8504
-            self.redirect_uri = "http://localhost:8504/callback"
+            # Forzar el uso de la URI de redirección para Streamlit
+            self.redirect_uri = "https://proyectosalud.streamlit.app"
             logger.info(f"Redirect URI forzado a: {self.redirect_uri}")
             
             self.client_id = os.getenv('GOOGLE_CLIENT_ID')
