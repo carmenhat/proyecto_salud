@@ -7,8 +7,10 @@ from pathlib import Path
 import sys
 import logging
 from pytz import timezone
+from dotenv import load_dotenv
 
 tz = timezone('Europe/Madrid')
+load_dotenv()
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -249,19 +251,37 @@ def show_sleep_analysis(sleep_analysis, analyzer):
     sleep_distribution = sleep_analysis.get('sleep_distribution', {})
     
     if sleep_distribution:
-        # Crear DataFrame para el gráfico
         dist_df = pd.DataFrame({
-            'Tipo': list(sleep_distribution.keys()),
+            'Fase': list(sleep_distribution.keys()),
             'Horas': list(sleep_distribution.values())
         })
-        
-        fig = px.bar(dist_df, x='Tipo', y='Horas',
-                    title='Distribución de Tipos de Sueño',
-                    color='Tipo',
-                    labels={'Tipo': 'Tipo de Sueño', 'Horas': 'Horas'})
+
+        fig = px.bar(
+            dist_df,
+            x='Fase',
+            y='Horas',
+            color='Fase',
+            text='Horas',
+            color_discrete_map={
+                'Ligero': '#8da0cb',
+                'Profundo': '#3d5a80',
+                'REM': '#5390d9'
+            },
+            title="Distribución de Sueño por Fase"
+        )
+
+        fig.update_traces(texttemplate='%{text:.1f}h', textposition='outside')
+        fig.update_layout(
+            yaxis_title='Horas',
+            xaxis_title='Fase del sueño',
+            uniformtext_minsize=8,
+            uniformtext_mode='hide',
+            bargap=0.4
+        )
+
         st.plotly_chart(fig, use_container_width=True)
     else:
-        st.warning("No hay datos válidos para mostrar en el gráfico")
+        st.warning("⚠️ No hay datos válidos para mostrar en el gráfico de fases de sueño.")
 
 # Interfaz principal
 def main():
@@ -346,7 +366,11 @@ def main():
                 'sleep': sleep_goal,
                 'active_minutes': active_minutes_goal
             })
-        
+            st.header("Contenido del Dashboard")
+            show_activity = st.checkbox("Mostrar Actividad Física", value=True)
+            show_steps = st.checkbox("Mostrar Pasos", value=True)
+            show_sleep = st.checkbox("Mostrar Sueño", value=True)
+
         # Obtener datos
         steps_df, hr_df, sleep_df, activity_df = get_data(fit_data, days)
         
@@ -357,42 +381,266 @@ def main():
         activity_analysis = analyzer.analyze_activity(activity_df)
         
         # Mostrar métricas principales
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3 = st.columns(3)
         with col1:
             st.metric("Pasos Promedio", steps_analysis.get('daily_average', 0))
         with col2:
             st.metric("Ritmo Cardíaco Promedio", f"{hr_analysis.get('average_hr', 0):.1f} bpm")
         with col3:
             st.metric("Horas de Sueño Promedio", f"{sleep_analysis.get('avg_hours', 0):.1f}")
-        with col4:
-            st.metric("Minutos Activos", activity_analysis.get('active_minutes', 0))
         
-        # Mostrar gráficos
-        st.header("Gráficos")
-        plot_steps(steps_df)
-        plot_heart_rate(hr_df)
-        plot_sleep(sleep_df, analyzer)
+        # Mostrar sección de actividad física si está habilitada    
         
-        # Mostrar recomendaciones
-        st.header("Recomendaciones")
-        analysis_results = {
-            'steps': steps_analysis,
-            'heart_rate': hr_analysis,
-            'sleep': {
-                'avg_hours': sleep_analysis.get('avg_hours', 0),
-                'sleep_quality_percent': sleep_analysis.get('sleep_quality_percent', 0),
-                'sleep_quality_label': sleep_analysis.get('sleep_quality_label', 'unknown')
-            },
-            'activity': activity_analysis
-        }
-        recommendations = recommender.generate_recommendations(analysis_results)
-        show_recommendations(recommendations)
+        if show_activity:
+            st.subheader("🏃 Actividad Física")
+            # (bloque de gauge + métricas + gráfico de minutos activos diarios)
+
+            active_minutes = int(activity_analysis.get('active_minutes', 0))
+            goal_per_day = recommender.goals.get('active_minutes', 30)
+            total_goal = goal_per_day * days  # meta semanal
+
+            # Conversión a horas y minutos
+            h = active_minutes // 60
+            m = active_minutes % 60
+            tiempo_str = f"{h}h {m}min" if h > 0 else f"{m} min"
+
+            # Conversión a horas y minutos
+            h = active_minutes // 60
+            m = active_minutes % 60
+            tiempo_str = f"{h}h {m}min" if h > 0 else f"{m} min"
+
+            # Cálculo de porcentaje
+            progress = min((active_minutes / total_goal) * 100, 100)
+            progress_color = "green" if progress >= 100 else "orange" if progress >= 60 else "red"
+
+            # Mensaje motivacional
+            if progress >= 100:
+                msg = "🎉 ¡Has superado tu objetivo semanal de actividad! Excelente trabajo."
+            elif progress >= 60:
+                msg = "🟠 Vas por buen camino. ¡Un último esfuerzo y lo consigues!"
+            else:
+                msg = "🔴 Intenta moverte un poco más cada día para alcanzar tu meta."
+
+            # Mostrar métrica principal
+            st.metric("Total Minutos Activos", tiempo_str)
+
+            # Mostrar barra de progreso con Plotly
         
-        # Mostrar análisis detallado del sueño
-        st.header("Análisis de Sueño")
-        show_sleep_analysis(sleep_analysis, analyzer)
-        st.subheader("🔍 Dashboard de Sueño")
-        show_sleep_dashboard(sleep_df, sleep_analysis)
+
+            fig = go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=active_minutes,
+                number={'suffix': " min"},
+                title={'text': "Progreso hacia la meta"},
+                gauge={
+                    'axis': {'range': [0, total_goal]},
+                    'bar': {'color': progress_color},
+                    'steps': [
+                        {'range': [0, total_goal * 0.6], 'color': '#f7c6c6'},
+                        {'range': [total_goal * 0.6, total_goal * 0.9], 'color': '#ffe0b2'},
+                        {'range': [total_goal * 0.9, total_goal], 'color': '#c8e6c9'},
+                    ],
+                    'threshold': {
+                        'line': {'color': "black", 'width': 4},
+                        'thickness': 0.75,
+                        'value': total_goal
+                    }
+                    
+                }
+            ))
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Mostrar mensaje motivacional
+            st.info(msg)
+            # ======================
+            # GRÁFICO DE MINUTOS ACTIVOS DIARIOS
+            # ======================
+            st.subheader("📆 Minutos Activos por Día")
+
+            if activity_df.empty:
+                st.warning("No hay datos de actividad disponibles.")
+            else:
+                # Calcular duración por día
+                activity_df['date'] = activity_df['start_time'].dt.date
+                active_types = [3, 7, 8, 109]  # A pie, caminando, corriendo, ejercicio
+                filtered = activity_df[activity_df['activity_type'].isin(active_types)]
+
+                daily_minutes = filtered.groupby('date')['duration'].sum().reset_index()
+                daily_minutes.rename(columns={'date': 'Fecha', 'duration': 'Minutos'}, inplace=True)
+
+                # Etiquetar si cumple objetivo
+                daily_minutes['Cumple Meta'] = daily_minutes['Minutos'].apply(
+                    lambda x: '✅ Meta alcanzada' if x >= goal_per_day else '❌ Por debajo'
+                )
+
+                # Crear gráfico de barras
+                fig = px.bar(
+                    daily_minutes,
+                    x='Fecha',
+                    y='Minutos',
+                    color='Cumple Meta',
+                    color_discrete_map={
+                        '✅ Meta alcanzada': '#66c2a5',  # verde
+                        '❌ Por debajo': '#fc8d62'       # rojo-naranja
+                    },
+                    title="Actividad Diaria: ¿Alcanzas tu meta de minutos activos?",
+                    labels={'Minutos': 'Minutos Activos'}
+                )
+
+                # Línea de meta (etiquetas de texto)
+                fig.add_hline(
+                    y=goal_per_day,
+                    line_dash="dot",
+                    line_color="black",
+                    annotation_text=f"Meta diaria: {goal_per_day} min",
+                    annotation_position="top left"
+                )
+
+                fig.update_layout(
+                    xaxis_title="Fecha",
+                    yaxis_title="Minutos activos",
+                    legend_title="Estado",
+                    bargap=0.25
+                )
+
+                st.plotly_chart(fig, use_container_width=True)
+
+
+        # ======================
+        # SECCIÓN DE PASOS
+        # ======================
+        
+        if show_steps:
+            st.subheader("👣 Pasos")
+            # (bloque de métricas + gauge + gráfico de pasos diarios)
+
+            total_steps = steps_analysis.get('total_steps', 0)
+            daily_average = steps_analysis.get('daily_average', 0)
+            steps_goal = recommender.goals.get('steps', 8000)
+
+            # Calcular progreso sobre la media diaria
+            progress = min((daily_average / steps_goal) * 100, 100)
+
+            # Mensaje motivador
+            if daily_average >= steps_goal:
+                msg = "✅ ¡Estás cumpliendo tu meta diaria de pasos! Sigue así."
+            elif daily_average >= steps_goal * 0.8:
+                msg = "🟠 Estás muy cerca de la meta. Un pequeño esfuerzo diario más y lo logras."
+            else:
+                msg = "🔴 Intenta caminar un poco más cada día para alcanzar los beneficios mínimos recomendados."
+
+            # Mostrar resumen de pasos
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Promedio Diario", f"{daily_average:,} pasos")
+            with col2:
+                st.metric("Pasos Totales", f"{total_steps:,}")
+
+            # Gráfico de progreso tipo gauge
+            fig = go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=daily_average,
+                number={'suffix': " /día"},
+                title={'text': "Progreso hacia la meta diaria"},
+                gauge={
+                    'axis': {'range': [0, steps_goal]},
+                    'bar': {'color': "green" if progress >= 100 else "orange" if progress >= 70 else "red"},
+                    'steps': [
+                        {'range': [0, steps_goal * 0.7], 'color': '#f7c6c6'},
+                        {'range': [steps_goal * 0.7, steps_goal * 0.9], 'color': '#ffe0b2'},
+                        {'range': [steps_goal * 0.9, steps_goal], 'color': '#c8e6c9'},
+                    ],
+                    'threshold': {
+                        'line': {'color': "black", 'width': 4},
+                        'thickness': 0.75,
+                        'value': steps_goal
+                    }
+                }
+            ))
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Mostrar mensaje motivador
+            st.info(msg)
+            # ======================
+            # GRÁFICO DE PASOS DIARIOS (con fines de semana)
+            # ======================
+
+            st.subheader("📊 Evolución Diaria de Pasos")
+
+            if steps_df.empty:
+                st.warning("No hay datos de pasos disponibles.")
+            else:
+                # Agrupar por fecha y sumar pasos
+                steps_daily = steps_df.groupby(steps_df['timestamp'].dt.date)['steps'].sum().reset_index()
+                steps_daily.rename(columns={'timestamp': 'Fecha', 'steps': 'Pasos'}, inplace=True)
+        
+                # Añadir tipo de día (laboral o fin de semana)
+                steps_daily['Día'] = pd.to_datetime(steps_daily['Fecha']).dt.dayofweek
+                steps_daily['Tipo de Día'] = steps_daily['Día'].apply(lambda x: 'Fin de Semana' if x >= 5 else 'Entre Semana')
+
+                # Crear gráfico
+                fig = px.bar(
+                    steps_daily,
+                    x='Fecha',
+                    y='Pasos',
+                    color='Tipo de Día',
+                    color_discrete_map={
+                        'Entre Semana': '#6baed6',   # azul claro
+                        'Fin de Semana': '#fd8d3c'   # naranja
+                    },
+                    title="Pasos Diarios: Semana vs. Fin de Semana",
+                    labels={'Pasos': 'Total de pasos'}
+                )
+
+                # Línea de referencia de objetivo
+                fig.add_hline(
+                    y=steps_goal,
+                    line_dash="dot",
+                    line_color="green",
+                    annotation_text=f"Meta: {steps_goal} pasos",
+                    annotation_position="top left"
+                )
+
+                fig.update_layout(
+                    xaxis_title="Fecha",
+                    yaxis_title="Pasos",
+                    legend_title="Tipo de Día",
+                    bargap=0.25
+                )
+
+                st.plotly_chart(fig, use_container_width=True)
+
+            
+            # Mostrar gráficos
+            st.header("Gráficos")
+            plot_steps(steps_df)
+            plot_heart_rate(hr_df)
+            plot_sleep(sleep_df, analyzer)
+            
+            # Mostrar recomendaciones
+            st.header("Recomendaciones")
+            analysis_results = {
+                'steps': steps_analysis,
+                'heart_rate': hr_analysis,
+                'sleep': {
+                    'avg_hours': sleep_analysis.get('avg_hours', 0),
+                    'sleep_quality_percent': sleep_analysis.get('sleep_quality_percent', 0),
+                    'sleep_quality_label': sleep_analysis.get('sleep_quality_label', 'unknown')
+                },
+                'activity': activity_analysis
+            }
+            recommendations = recommender.generate_recommendations(analysis_results)
+            show_recommendations(recommendations)
+        
+        # Mostrar análisis detallado del sueño 
+        if show_sleep:
+            st.subheader("🛌 Análisis de Sueño")
+            show_sleep_analysis(sleep_analysis, analyzer)
+
+            st.subheader("🔍 Dashboard de Sueño")
+            show_sleep_dashboard(sleep_df, sleep_analysis)
+
+               
 
         
     except Exception as e:

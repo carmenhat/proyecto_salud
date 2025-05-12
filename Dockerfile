@@ -17,7 +17,7 @@ COPY . .
 RUN mkdir -p tokens
 
 # Exponer el puerto que usa Streamlit
-EXPOSE 8501
+EXPOSE 8504
 
 # Comando para ejecutar la aplicación
-CMD ["streamlit", "run", "app/ui/main.py", "--server.port=8501", "--server.address=0.0.0.0"] 
+CMD ["streamlit", "run", "app/ui/main.py", "--server.port=8504", "--server.address=0.0.0.0"]
