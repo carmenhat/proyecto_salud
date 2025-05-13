@@ -8,6 +8,9 @@ import pickle
 from pathlib import Path
 import logging
 from dotenv import load_dotenv
+import json
+import streamlit as st
+from datetime import datetime
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -34,12 +37,6 @@ class GoogleFitAuth:
                 'https://www.googleapis.com/auth/fitness.body.read'
             ]
             
-            # Crear directorio tokens en el directorio del proyecto
-            project_root = Path(__file__).parent.parent.parent
-            self.token_path = project_root / 'tokens' / 'google_fit_token.pickle'
-            self.token_path.parent.mkdir(exist_ok=True)
-            
-            logger.info(f"GoogleFitAuth inicializado correctamente. Token path: {self.token_path}")
             
         except Exception as e:
             logger.error(f"Error al inicializar GoogleFitAuth: {str(e)}")
@@ -80,10 +77,10 @@ class GoogleFitAuth:
             raise
 
     def get_credentials(self, code: str) -> Credentials:
-        """Obtiene las credenciales usando el código de autorización."""
+        """Obtiene credenciales y las guarda en session_state"""
         try:
             flow = Flow.from_client_config(
-                {
+                client_config={
                     "web": {
                         "client_id": self.client_id,
                         "client_secret": self.client_secret,
@@ -92,47 +89,82 @@ class GoogleFitAuth:
                         "redirect_uris": [self.redirect_uri]
                     }
                 },
-                scopes=self.scopes
+                scopes=self.scopes,
+                redirect_uri=self.redirect_uri
             )
-            flow.redirect_uri = self.redirect_uri
+            
             flow.fetch_token(code=code)
             credentials = flow.credentials
-            self._save_credentials(credentials)
-            logger.info("Credenciales obtenidas y guardadas correctamente")
+            
+            # Serializar para session_state
+            creds_dict = {
+                'token': credentials.token,
+                'refresh_token': credentials.refresh_token,
+                'token_uri': credentials.token_uri,
+                'client_id': credentials.client_id,
+                'client_secret': credentials.client_secret,
+                'scopes': credentials.scopes
+            }
+            
+            st.session_state['google_fit_creds'] = creds_dict
+            logger.info("Credenciales guardadas en session_state")
             return credentials
+            
         except Exception as e:
             logger.error(f"Error al obtener credenciales: {str(e)}")
             raise
 
-    def _save_credentials(self, credentials: Credentials) -> None:
-        """Guarda las credenciales en un archivo pickle."""
-        try:
-            with open(self.token_path, 'wb') as token:
-                pickle.dump(credentials, token)
-            logger.info("Credenciales guardadas correctamente")
-        except Exception as e:
-            logger.error(f"Error al guardar credenciales: {str(e)}")
-            raise
-
     def load_credentials(self) -> Optional[Credentials]:
-        """Carga las credenciales desde el archivo pickle."""
+        """Carga credenciales desde session_state y refresca si es necesario"""
         try:
-            if not self.token_path.exists():
-                logger.info("No se encontraron credenciales guardadas")
+            if 'google_fit_creds' not in st.session_state:
+                logger.info("No hay credenciales en session_state")
                 return None
-            
-            with open(self.token_path, 'rb') as token:
-                credentials = pickle.load(token)
-                
-            if credentials and credentials.expired and credentials.refresh_token:
+
+            # Cargar desde sesión
+            creds_dict = st.session_state['google_fit_creds']
+            # Construir manualmente las credenciales
+            credentials = Credentials(
+                token=creds_dict['token'],
+                refresh_token=creds_dict['refresh_token'],
+                token_uri=creds_dict['token_uri'],
+                client_id=creds_dict['client_id'],
+                client_secret=creds_dict['client_secret'],
+                scopes=creds_dict['scopes'],
+                expiry=datetime.fromisoformat(creds_dict['expiry'])  # Parsear datetime
+            )
+
+
+            # Refrescar token si está expirado
+            if credentials.expired and credentials.refresh_token:
+                logger.info("Refrescando token expirado...")
                 credentials.refresh(Request())
-                self._save_credentials(credentials)
-                logger.info("Credenciales actualizadas correctamente")
-                
+            
+                # Actualizar session_state con nuevo token
+                self._save_credentials_to_session(credentials)
+                logger.info("Token refrescado y guardado")
+
             return credentials
+
         except Exception as e:
-            logger.error(f"Error al cargar credenciales: {str(e)}")
+            logger.error(f"Error cargando credenciales: {str(e)}")
+            del st.session_state['google_fit_creds']  # Limpiar credenciales inválidas
             return None
+
+    def _save_credentials_to_session(self, credentials: Credentials) -> None:
+        """Guarda credenciales serializadas en session_state"""
+        st.session_state['google_fit_creds'] = {
+            'token': credentials.token,
+            'refresh_token': credentials.refresh_token,
+            'token_uri': credentials.token_uri,
+            'client_id': credentials.client_id,
+            'client_secret': credentials.client_secret,
+            'scopes': credentials.scopes,
+            'expiry': credentials.expiry.isoformat() 
+        }
+    
+
+
 
     def get_fit_service(self) -> Optional[object]:
         """Obtiene el servicio de Google Fit."""
