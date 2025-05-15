@@ -103,7 +103,8 @@ class GoogleFitAuth:
                 'token_uri': credentials.token_uri,
                 'client_id': credentials.client_id,
                 'client_secret': credentials.client_secret,
-                'scopes': credentials.scopes
+                'scopes': credentials.scopes,
+                'expiry': credentials.expiry.isoformat() if credentials.expiry else None
             }
             
             st.session_state['google_fit_creds'] = creds_dict
