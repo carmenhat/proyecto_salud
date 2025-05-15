@@ -626,9 +626,7 @@ def main():
                 Esto permitirá a la aplicación acceder a tus datos de actividad física, ritmo cardíaco y sueño.
             """)
             
-            if st.button("🔑 Iniciar sesión con Google Fit", type="primary"):
-                st.session_state.auth_redirect = True
-                webbrowser.open_new_tab(auth_url)
+            st.markdown(f"[🔑 Iniciar sesión con Google Fit]({auth_url})", unsafe_allow_html=True)
             
             st.warning("""
                 Nota: La autenticación es necesaria para acceder a tus datos.
