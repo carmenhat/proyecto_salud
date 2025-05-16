@@ -16,17 +16,23 @@ Aplicación de análisis de salud y fitness que integra datos de Google Fit para
 ```
 health-fitness-app/
 ├── app/
-│   ├── api/              # Integración con Google Fit API
-│   ├── core/             # Lógica principal de la aplicación
-│   ├── models/           # Modelos de datos
-│   ├── services/         # Servicios de análisis y recomendaciones
-│   └── ui/               # Interfaz de usuario con Streamlit
-├── tests/                # Pruebas unitarias y de integración
-├── config/               # Configuraciones y variables de entorno
-├── data/                 # Datos y scripts de inicialización
-├── docs/                 # Documentación adicional
-├── requirements.txt      # Dependencias del proyecto
-└── Dockerfile           # Configuración de Docker
+│ ├── api/ # Conexión segura con Google Fit (autenticación y obtención de datos)
+│ │ ├── google_fit_auth.py # Gestión de autenticación OAuth2
+│ │ └── google_fit_data.py # Obtención y procesamiento de datos de Google Fit
+│ ├── services/ # Análisis y generación de recomendaciones personalizadas
+│ │ ├── data_analysis.py # Procesamiento y análisis de datos de salud
+│ │ └── recommendations.py # Generación de recomendaciones basadas en datos
+│ └── ui/ # Interfaz de usuario desarrollada con Streamlit
+│ └── pages/ # Páginas de la aplicación
+│ ├── callback.py # Gestión de callbacks de autenticación
+│ └── main.py # Página principal y dashboard
+├── .env.example # Plantilla para variables de entorno
+├── .gitignore # Configuración de archivos ignorados por Git
+├── Dockerfile # Configuración para contenerización con Docker
+├── README.md # Documentación principal del proyecto
+├── guia_google_fit.md # Guía específica para la integración con Google Fit
+└── requirements.txt # Dependencias necesarias para el proyecto
+```
 ```
 
 ## Configuración Inicial
